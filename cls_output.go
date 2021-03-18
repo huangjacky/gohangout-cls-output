@@ -1,12 +1,13 @@
 package main
 
 import (
+	"context"
 	"time"
 
-	cls "gohangout-output-cls/cls"
-	proto "gohangout-output-cls/proto"
-
 	"github.com/golang/glog"
+	proto "github.com/golang/protobuf/proto"
+	cls "github.com/huangjacky/gohangout-output-cls/cls"
+	clsproto "github.com/huangjacky/gohangout-output-cls/proto"
 )
 
 // ClsOutput 插件
@@ -23,7 +24,7 @@ type ClsOutput struct {
 	MaxSize   int
 	BufLength int
 	Tick      int
-	channel   chan *proto.Log
+	channel   chan *clsproto.Log
 	client    *cls.Client
 }
 
@@ -33,7 +34,7 @@ New 插件模式的初始化
 func New(config map[interface{}]interface{}) interface{} {
 	p := &ClsOutput{
 		config:  config,
-		channel: make(chan *proto.Log),
+		channel: make(chan *clsproto.Log),
 	}
 	if v, ok := config["region"]; ok {
 		p.Region = v.(string)
@@ -89,37 +90,64 @@ func New(config map[interface{}]interface{}) interface{} {
 	}
 	tick := time.NewTicker(time.Duration(p.Tick) * time.Second)
 	go func() {
-		count = 0
-		bytesCount = 0
+		var count, bytesCount int
+		var send bool
+		var lgl *clsproto.LogGroupList
+		var group *clsproto.LogGroup
 
+		var reset = func() {
+			count = 0
+			bytesCount = 0
+			send = false
+			lgl = &clsproto.LogGroupList{
+				LogGroupList: make([]*clsproto.LogGroup, 0),
+			}
+			group = &clsproto.LogGroup{
+				Logs: make([]*clsproto.Log, 0),
+			}
+			lgl.LogGroupList = append(lgl.LogGroupList, group)
+		}
+		reset()
 		for {
 			select {
-			case dd, ok := <-d:
+			case dd, ok := <-p.channel:
 				if ok {
 					count++
-					bytesCount += dd.length
-					events = append(events, dd.msg)
+					bytesCount += dd.XXX_Size()
+					group.Logs = append(group.Logs, dd)
 				}
 			case <-tick.C:
 				send = true
 			}
-			if send || count >= m.Output.eventCount || bytesCount >= m.Output.bytesCount {
+			if send || count >= p.MaxSize || bytesCount >= p.MaxBytes {
 				send = false
 				if count > 0 {
-					m.Output.send2CLS(topicId, events)
+					ds, err := proto.Marshal(lgl)
+					if err != nil {
+						glog.Errorf("proto Marshal ERROR %s", err)
+						return
+					}
+					go func() {
+						_, resp, err := p.client.Log.UploadStructuredLog(context.Background(), p.Topic, ds)
+						if err != nil {
+							glog.Errorf("SEND CLS ERROR %s", err)
+							return
+						}
+						resp.Body.Close()
+					}()
 					reset()
 				}
 			}
 		}
 
 	}()
-	var inet Net
+	var inet cls.Net
 	if p.Inner {
-		inet = InNet
+		inet = cls.InNet
 	} else {
-		inet = OutNet
+		inet = cls.OutNet
 	}
-	p.client = NewClient(
+	p.client = cls.NewClient(
 		p.Region, p.SecretId, p.SecretKey, p.Token, inet,
 	)
 	p.BufLength = 0
