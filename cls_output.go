@@ -1,10 +1,11 @@
 package main
 
 import (
-	"proto"
 	"time"
 
 	"github.com/golang/glog"
+	proto "github.com/huangjacky/gohangout-output-cls/cls"
+	cls "github.com/huangjacky/gohangout-output-cls/proto"
 )
 
 // ClsOutput 插件
@@ -22,7 +23,7 @@ type ClsOutput struct {
 	BufLength int
 	Tick      int
 	channel   chan *proto.Log
-	client    *Client
+	client    *cls.Client
 }
 
 /*
@@ -30,7 +31,8 @@ New 插件模式的初始化
 */
 func New(config map[interface{}]interface{}) interface{} {
 	p := &ClsOutput{
-		config: config,
+		config:  config,
+		channel: make(chan *proto.Log),
 	}
 	if v, ok := config["region"]; ok {
 		p.Region = v.(string)
