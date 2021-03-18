@@ -156,7 +156,17 @@ func New(config map[interface{}]interface{}) interface{} {
 
 //Emit 单次事件的处理函数
 func (p *ClsOutput) Emit(event map[string]interface{}) {
-
+	log := &clsproto.Log{
+		Contents: make([]*clsproto.Log_Content, 0),
+	}
+	for k, v := range event {
+		content := &clsproto.Log_Content{
+			Key:   proto.String(k),
+			Value: proto.String(v),
+		}
+		log.Contents = append(log.Contents, content)
+	}
+	p.channel <- log
 }
 
 //Shutdown 关闭需要做的事情

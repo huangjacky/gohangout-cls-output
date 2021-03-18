@@ -2,12 +2,8 @@
 此包为 https://github.com/childe/gohangout 项目的 CLS(Tencent Cloud Log Service 腾讯云日志服务) outputs 插件。
 
 # 特点
-使用[kafka-go](https://github.com/segmentio/kafka-go) 这个仓库来作为output
-### TODO
-- TLS配置项的支持
-
-### DONE
-SASL已经支持
+由于目前CLS团队没有对外发布官方的SDK，因此这里采用从其内部SDK中扣取对应上传相关的代码，作为插件的子代码。
+后续如果有官方SDK了后，会采用对应的SDK，避免插件中自己维护一套代码。
 
 # 使用方法
 
