@@ -3,9 +3,10 @@ package main
 import (
 	"time"
 
+	cls "gohangout-output-cls/cls"
+	proto "gohangout-output-cls/proto"
+
 	"github.com/golang/glog"
-	proto "github.com/huangjacky/gohangout-output-cls/cls"
-	cls "github.com/huangjacky/gohangout-output-cls/proto"
 )
 
 // ClsOutput 插件
